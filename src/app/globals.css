@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Main Background & Text */
+    --background: 200 60% 4%; /* Very dark teal background */
+    --foreground: 160 100% 85%; /* Light greenish-cyan text */
+
+    /* Primary Neon Green */
+    --primary: 145 85% 60%;
+    --primary-foreground: 200 60% 4%;
+
+    /* Secondary Neon Cyan */
+    --secondary: 175 90% 65%;
+    --secondary-foreground: 200 60% 4%;
+
+    /* Accent Electric Blue */
+    --accent: 190 95% 65%;
+    --accent-foreground: 200 60% 4%;
+
+    /* Brick Colors (matching background grid style) */
+    --brick-dark: 200 60% 4%;
+    --brick-outline: 145 85% 60%;
+    --brick-outline-alt: 175 90% 65%;
+  }
+
+  body {
+    /* If text-foreground is not defined in your Tailwind config, you can use the following instead:
+       color: hsl(var(--foreground)); */
+    @apply text-foreground;
+    background-color: hsl(var(--brick-dark));
+    
+    background-attachment: fixed;
+    animation: brickScroll 5s linear infinite;
+  }
+
+  /* Neon glow utility */
+  .neon-glow {
+    text-shadow:
+      0 0 5px hsl(var(--primary)),
+      0 0 10px hsl(var(--primary)),
+      0 0 20px hsl(var(--primary)),
+      0 0 40px hsl(var(--secondary));
+  }
+
+  
+}
