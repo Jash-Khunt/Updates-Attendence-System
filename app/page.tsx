@@ -30,6 +30,21 @@ interface Event {
   maxMember?: number;
 }
 
+const allowedEventNames = [
+  "Codewinglet",
+  "Cineverse",
+  "Human or AI",
+  "Cyber Chase",
+  "Meme Fest",
+  "Tech Debate",
+  "Tech Ladder",
+  "Decode & Dash",
+  "Stock X Stake",
+  "Code Relay",
+  "No KeyClick",
+  "Aavishkar",
+];
+
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,13 +63,17 @@ export default function Home() {
       const response = await fetch("/api/events");
       const data = await response.json();
 
-      setEvents(data.events);
+      // Filter only allowed event names
+      const filteredEvents = data.events.filter((e: Event) =>
+        allowedEventNames.includes(e.name)
+      );
+      setEvents(filteredEvents);
 
       // 👉 Log all event names in the console
-      if (Array.isArray(data.events)) {
+      if (Array.isArray(filteredEvents)) {
         console.log(
           "Fetched events:",
-          data.events.map((e: Event) => e.name)
+          filteredEvents.map((e: Event) => e.name)
         );
       }
     } catch (error) {
