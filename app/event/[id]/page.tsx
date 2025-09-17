@@ -182,10 +182,11 @@ export default function EventAttendancePage() {
 
       groups.forEach((group) => {
         // Use email as primary identifier for group deduplication
-        const leaderEmail = group.leader.email?.toLowerCase();
+        const leaderEmail = group.leader?.email?.toLowerCase();
         const groupIdentifier = `${group.groupId}-${leaderEmail}`;
 
         if (
+          leaderEmail &&
           !seenGroups.has(groupIdentifier) &&
           !seenLeaderEmails.has(leaderEmail)
         ) {
@@ -457,21 +458,33 @@ export default function EventAttendancePage() {
 
     // Add existing participants emails
     allParticipants.forEach((group) => {
-      existingEmails.add(group.leader.email.toLowerCase());
-      group.members.forEach((member) =>
-        existingEmails.add(member.email.toLowerCase())
-      );
+      if (group.leader?.email) {
+        existingEmails.add(group.leader.email.toLowerCase());
+      }
+      group.members?.forEach((member) => {
+        if (member.email) {
+          existingEmails.add(member.email.toLowerCase());
+        }
+      });
     });
 
     // Add temp participants emails
-    tempParticipants.forEach((p) => existingEmails.add(p.email.toLowerCase()));
+    tempParticipants.forEach((p) => {
+      if (p.email) {
+        existingEmails.add(p.email.toLowerCase());
+      }
+    });
 
     // Add temp groups emails
     tempGroups.forEach((group) => {
-      existingEmails.add(group.leader.email.toLowerCase());
-      group.members.forEach((member) =>
-        existingEmails.add(member.email.toLowerCase())
-      );
+      if (group.leader?.email) {
+        existingEmails.add(group.leader.email.toLowerCase());
+      }
+      group.members?.forEach((member) => {
+        if (member.email) {
+          existingEmails.add(member.email.toLowerCase());
+        }
+      });
     });
 
     const hasExistingEmail = allGroupEmails.some((email) =>
@@ -636,6 +649,12 @@ export default function EventAttendancePage() {
       const filteredTempParticipants = tempParticipants.filter(
         (p) => !deletedParticipants.has(p.email.toLowerCase())
       );
+      console.log("[v0] Regular participants:", regularParticipants.length);
+      console.log("[v0] Temp participants:", filteredTempParticipants.length);
+      console.log(
+        "[v0] Deleted participants:",
+        Array.from(deletedParticipants)
+      );
       return [...regularParticipants, ...filteredTempParticipants];
     } else {
       const regularGroups = participants as Group[];
@@ -644,20 +663,25 @@ export default function EventAttendancePage() {
         leader: tg.leader,
         members: tg.members,
       }));
-
-      // Combine and filter deleted groups/participants
-      return [...regularGroups, ...tempGroupsAsGroups].filter((group) => {
-        const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
-          group.groupId
-        }`;
-        return !deletedParticipants.has(leaderRowId);
-      });
+      console.log("[v0] Regular groups:", regularGroups.length);
+      console.log("[v0] Temp groups:", tempGroupsAsGroups.length);
+      return [...regularGroups, ...tempGroupsAsGroups];
     }
   };
 
   const filteredParticipants = (() => {
     if (event?.eventType === "SOLO") {
       const allParticipants = getAllParticipants() as Participant[];
+      console.log(
+        "[v0] All participants for filtering:",
+        allParticipants.length
+      );
+      console.log("[v0] Temp participants:", tempParticipants.length);
+      console.log(
+        "[v0] Regular participants:",
+        (participants as Participant[]).length
+      );
+
       return allParticipants.filter(
         (p) =>
           !deletedParticipants.has(p.email.toLowerCase()) &&
@@ -665,48 +689,17 @@ export default function EventAttendancePage() {
             (p.email?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()))
       );
     } else {
-      // For group events, we need to filter groups based on search term
-      const allGroups = getAllParticipants() as Group[];
+      // For GROUP events, combine regular groups and temp groups
+      const regularGroups = participants as Group[];
+      const allGroups = [...regularGroups, ...tempGroups];
 
       return allGroups
-        .filter((group) => {
-          // Check if leader matches search
-          const leaderMatch =
-            (group.leader.name?.toLowerCase() ?? "").includes(
-              searchTerm.toLowerCase()
-            ) ||
-            (group.leader.email?.toLowerCase() ?? "").includes(
-              searchTerm.toLowerCase()
-            );
-
-          // Check if any member matches search
-          const memberMatch = group.members.some(
-            (m) =>
-              (m.name?.toLowerCase() ?? "").includes(
-                searchTerm.toLowerCase()
-              ) ||
-              (m.email?.toLowerCase() ?? "").includes(searchTerm.toLowerCase())
-          );
-
-          // Only include groups where either leader or at least one member matches
-          return leaderMatch || memberMatch;
-        })
         .map((group) => {
-          // For each group, filter members based on search term
           const filteredMembers = group.members.filter((member) => {
             const memberRowId = `${member.email.toLowerCase()}_member_${
               group.groupId
             }`;
-            const memberMatch =
-              (member.name?.toLowerCase() ?? "").includes(
-                searchTerm.toLowerCase()
-              ) ||
-              (member.email?.toLowerCase() ?? "").includes(
-                searchTerm.toLowerCase()
-              );
-
-            // Only include members that match search and aren't deleted
-            return !deletedParticipants.has(memberRowId) && memberMatch;
+            return !deletedParticipants.has(memberRowId);
           });
 
           return {
@@ -715,11 +708,15 @@ export default function EventAttendancePage() {
           };
         })
         .filter((group) => {
-          // Final filter to remove groups with no visible members
+          if (!group.leader?.email) return false;
+
           const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
             group.groupId
           }`;
           const leaderDeleted = deletedParticipants.has(leaderRowId);
+
+          if (leaderDeleted) return false;
+
           const leaderMatch =
             (group.leader.name?.toLowerCase() ?? "").includes(
               searchTerm.toLowerCase()
@@ -727,9 +724,14 @@ export default function EventAttendancePage() {
             (group.leader.email?.toLowerCase() ?? "").includes(
               searchTerm.toLowerCase()
             );
-
-          // Keep group if leader is not deleted AND matches search, OR if there are members left
-          return (!leaderDeleted && leaderMatch) || group.members.length > 0;
+          const memberMatch = group.members.some(
+            (m) =>
+              (m.name?.toLowerCase() ?? "").includes(
+                searchTerm.toLowerCase()
+              ) ||
+              (m.email?.toLowerCase() ?? "").includes(searchTerm.toLowerCase())
+          );
+          return leaderMatch || memberMatch || group.members.length > 0;
         });
     }
   })();
@@ -740,12 +742,11 @@ export default function EventAttendancePage() {
     ];
 
     if (event?.eventType === "SOLO") {
-      // Get all participants (regular + temporary)
       const allParticipants = getAllParticipants() as Participant[];
-
       allParticipants
         .filter((p) => !deletedParticipants.has(p.email.toLowerCase()))
         .forEach((p) => {
+          const userId = getUserId(p);
           const record = getAttendanceStatus(p);
           rows.push([
             p.name,
@@ -760,48 +761,48 @@ export default function EventAttendancePage() {
           ]);
         });
     } else {
-      // For group events, include both regular groups and temporary groups
-      const allGroups = getAllParticipants() as Group[];
-
-      allGroups.forEach((group) => {
-        const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
-          group.groupId
-        }`;
-
-        // Add leader if not deleted
-        if (!deletedParticipants.has(leaderRowId)) {
-          const leaderRecord = getAttendanceStatus(group.leader);
-          rows.push([
-            group.leader.name + " (Leader)",
-            group.leader.email,
-            leaderRecord?.entryTime
-              ? new Date(leaderRecord.entryTime).toLocaleString()
-              : "Not marked",
-            leaderRecord?.exitTime
-              ? new Date(leaderRecord.exitTime).toLocaleString()
-              : "Not marked",
-            leaderRecord?.status || "ABSENT",
-          ]);
-        }
-
-        // Add members if not deleted
-        group.members.forEach((member) => {
-          const memberRowId = `${member.email.toLowerCase()}_member_${
+      (participants as Group[]).forEach((group) => {
+        if (group.leader && group.leader.email) {
+          const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
             group.groupId
           }`;
-          if (!deletedParticipants.has(memberRowId)) {
-            const memberRecord = getAttendanceStatus(member);
+          if (!deletedParticipants.has(leaderRowId)) {
+            const leaderUserId = getUserId(group.leader);
+            const leaderRecord = getAttendanceStatus(group.leader);
             rows.push([
-              member.name,
-              member.email,
-              memberRecord?.entryTime
-                ? new Date(memberRecord.entryTime).toLocaleString()
+              group.leader.name + " (Leader)",
+              group.leader.email,
+              leaderRecord?.entryTime
+                ? new Date(leaderRecord.entryTime).toLocaleString()
                 : "Not marked",
-              memberRecord?.exitTime
-                ? new Date(memberRecord.exitTime).toLocaleString()
+              leaderRecord?.exitTime
+                ? new Date(leaderRecord.exitTime).toLocaleString()
                 : "Not marked",
-              memberRecord?.status || "ABSENT",
+              leaderRecord?.status || "ABSENT",
             ]);
+          }
+        }
+
+        group.members.forEach((member) => {
+          if (member && member.email) {
+            const memberRowId = `${member.email.toLowerCase()}_member_${
+              group.groupId
+            }`;
+            if (!deletedParticipants.has(memberRowId)) {
+              const memberUserId = getUserId(member);
+              const memberRecord = getAttendanceStatus(member);
+              rows.push([
+                member.name,
+                member.email,
+                memberRecord?.entryTime
+                  ? new Date(memberRecord.entryTime).toLocaleString()
+                  : "Not marked",
+                memberRecord?.exitTime
+                  ? new Date(memberRecord.exitTime).toLocaleString()
+                  : "Not marked",
+                memberRecord?.status || "ABSENT",
+              ]);
+            }
           }
         });
       });
@@ -824,17 +825,21 @@ export default function EventAttendancePage() {
       ).length;
     } else {
       return (participants as Group[]).reduce((acc, group) => {
+        if (!group.leader?.email) return acc;
+
         const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
           group.groupId
         }`;
         const leaderCount = deletedParticipants.has(leaderRowId) ? 0 : 1;
 
-        const memberCount = group.members.filter((m) => {
-          const memberRowId = `${m.email.toLowerCase()}_member_${
-            group.groupId
-          }`;
-          return !deletedParticipants.has(memberRowId);
-        }).length;
+        const memberCount =
+          group.members?.filter((m) => {
+            if (!m.email) return false;
+            const memberRowId = `${m.email.toLowerCase()}_member_${
+              group.groupId
+            }`;
+            return !deletedParticipants.has(memberRowId);
+          }).length || 0;
 
         return acc + leaderCount + memberCount;
       }, 0);
@@ -946,10 +951,7 @@ export default function EventAttendancePage() {
                   <Input
                     placeholder="Search participants..."
                     value={searchTerm}
-                    onChange={(e) => {
-                      console.log("Search term:", e.target.value); // Debug log
-                      setSearchTerm(e.target.value);
-                    }}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 w-full"
                   />
                 </div>
