@@ -782,9 +782,10 @@ export default function EventAttendancePage() {
         "Email",
         "Enrollment No",
         "Phone Number",
-        "Entry Time",
-        "Exit Time",
-        "Status",
+        "Signature", // <-- Blank column
+        // "Entry Time",
+        // "Exit Time",
+        // "Status",
       ],
     ];
 
@@ -793,20 +794,21 @@ export default function EventAttendancePage() {
       allParticipants
         .filter((p) => !deletedParticipants.has(p.email.toLowerCase()))
         .forEach((p) => {
-          const userId = getUserId(p);
-          const record = getAttendanceStatus(p);
+          // const userId = getUserId(p);
+          // const record = getAttendanceStatus(p);
           rows.push([
             p.name,
             p.email,
             p.enrollmentNo || "—",
             p.phoneNumber || "—",
-            record?.entryTime
-              ? new Date(record.entryTime).toLocaleString()
-              : "Not marked",
-            record?.exitTime
-              ? new Date(record.exitTime).toLocaleString()
-              : "Not marked",
-            record?.status || "ABSENT",
+            "", // Signature column blank
+            // record?.entryTime
+            //   ? new Date(record.entryTime).toLocaleString()
+            //   : "Not marked",
+            // record?.exitTime
+            //   ? new Date(record.exitTime).toLocaleString()
+            //   : "Not marked",
+            // record?.status || "ABSENT",
           ]);
         });
     } else {
@@ -817,20 +819,21 @@ export default function EventAttendancePage() {
             group.groupId
           }`;
           if (!deletedParticipants.has(leaderRowId)) {
-            const leaderUserId = getUserId(group.leader);
-            const leaderRecord = getAttendanceStatus(group.leader);
+            // const leaderUserId = getUserId(group.leader);
+            // const leaderRecord = getAttendanceStatus(group.leader);
             rows.push([
               group.leader.name + " (Leader)",
               group.leader.email,
               group.leader.enrollmentNo || "—",
               group.leader.phoneNumber || "—",
-              leaderRecord?.entryTime
-                ? new Date(leaderRecord.entryTime).toLocaleString()
-                : "Not marked",
-              leaderRecord?.exitTime
-                ? new Date(leaderRecord.exitTime).toLocaleString()
-                : "Not marked",
-              leaderRecord?.status || "ABSENT",
+              "", // Signature column blank
+              // leaderRecord?.entryTime
+              //   ? new Date(leaderRecord.entryTime).toLocaleString()
+              //   : "Not marked",
+              // leaderRecord?.exitTime
+              //   ? new Date(leaderRecord.exitTime).toLocaleString()
+              //   : "Not marked",
+              // leaderRecord?.status || "ABSENT",
             ]);
           }
         }
@@ -841,26 +844,27 @@ export default function EventAttendancePage() {
               group.groupId
             }`;
             if (!deletedParticipants.has(memberRowId)) {
-              const memberUserId = getUserId(member);
-              const memberRecord = getAttendanceStatus(member);
+              // const memberUserId = getUserId(member);
+              // const memberRecord = getAttendanceStatus(member);
               rows.push([
                 member.name,
                 member.email,
                 member.enrollmentNo || "—",
                 member.phoneNumber || "—",
-                memberRecord?.entryTime
-                  ? new Date(memberRecord.entryTime).toLocaleString()
-                  : "Not marked",
-                memberRecord?.exitTime
-                  ? new Date(memberRecord.exitTime).toLocaleString()
-                  : "Not marked",
-                memberRecord?.status || "ABSENT",
+                "", // Signature column blank
+                // memberRecord?.entryTime
+                //   ? new Date(memberRecord.entryTime).toLocaleString()
+                //   : "Not marked",
+                // memberRecord?.exitTime
+                //   ? new Date(memberRecord.exitTime).toLocaleString()
+                //   : "Not marked",
+                // memberRecord?.status || "ABSENT",
               ]);
             }
           }
         });
         // Add a blank row after each group
-        rows.push([""]); // This will add a single empty cell, which renders as a blank line in CSV
+        rows.push([""]);
       });
     }
 
