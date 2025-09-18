@@ -674,67 +674,104 @@ export default function EventAttendancePage() {
   const filteredParticipants = (() => {
     if (event?.eventType === "SOLO") {
       const allParticipants = getAllParticipants() as Participant[];
-      console.log(
-        "[v0] All participants for filtering:",
-        allParticipants.length
-      );
-      console.log("[v0] Temp participants:", tempParticipants.length);
-      console.log(
-        "[v0] Regular participants:",
-        (participants as Participant[]).length
-      );
 
       return allParticipants.filter(
         (p) =>
           !deletedParticipants.has(p.email.toLowerCase()) &&
           ((p.name?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()) ||
-            (p.email?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()))
+            (p.email?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()) ||
+            (p.enrollmentNo?.toLowerCase() ?? "").includes(
+              searchTerm.toLowerCase()
+            ) ||
+            (p.phoneNumber?.toLowerCase() ?? "").includes(
+              searchTerm.toLowerCase()
+            ))
       );
     } else {
-      // For GROUP events, combine regular groups and temp groups
+      // For GROUP events
       const regularGroups = participants as Group[];
       const allGroups = [...regularGroups, ...tempGroups];
 
-      return allGroups
-        .map((group) => {
-          const filteredMembers = group.members.filter((member) => {
-            const memberRowId = `${member.email.toLowerCase()}_member_${
+      if (!searchTerm) {
+        // If no search term, return all groups with filtered members
+        return allGroups
+          .map((group) => {
+            const filteredMembers = group.members.filter((member) => {
+              const memberRowId = `${member.email.toLowerCase()}_member_${
+                group.groupId
+              }`;
+              return !deletedParticipants.has(memberRowId);
+            });
+
+            return {
+              ...group,
+              members: filteredMembers,
+            };
+          })
+          .filter((group) => {
+            if (!group.leader?.email) return false;
+            const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
               group.groupId
             }`;
-            return !deletedParticipants.has(memberRowId);
+            return !deletedParticipants.has(leaderRowId);
           });
+      }
 
-          return {
-            ...group,
-            members: filteredMembers,
-          };
-        })
-        .filter((group) => {
-          if (!group.leader?.email) return false;
-
-          const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
-            group.groupId
-          }`;
-          const leaderDeleted = deletedParticipants.has(leaderRowId);
-
-          if (leaderDeleted) return false;
-
-          const leaderMatch =
+      // If there's a search term, filter groups and members
+      return allGroups
+        .map((group) => {
+          // Check if leader matches search
+          const leaderMatches =
             (group.leader.name?.toLowerCase() ?? "").includes(
               searchTerm.toLowerCase()
             ) ||
             (group.leader.email?.toLowerCase() ?? "").includes(
               searchTerm.toLowerCase()
+            ) ||
+            (group.leader.enrollmentNo?.toLowerCase() ?? "").includes(
+              searchTerm.toLowerCase()
+            ) ||
+            (group.leader.phoneNumber?.toLowerCase() ?? "").includes(
+              searchTerm.toLowerCase()
             );
-          const memberMatch = group.members.some(
-            (m) =>
-              (m.name?.toLowerCase() ?? "").includes(
+
+          // Filter members based on search and deletion status
+          const filteredMembers = group.members.filter((member) => {
+            const memberRowId = `${member.email.toLowerCase()}_member_${
+              group.groupId
+            }`;
+            const isDeleted = deletedParticipants.has(memberRowId);
+
+            if (isDeleted) return false;
+
+            const memberMatches =
+              (member.name?.toLowerCase() ?? "").includes(
                 searchTerm.toLowerCase()
               ) ||
-              (m.email?.toLowerCase() ?? "").includes(searchTerm.toLowerCase())
-          );
-          return leaderMatch || memberMatch || group.members.length > 0;
-        });
+              (member.email?.toLowerCase() ?? "").includes(
+                searchTerm.toLowerCase()
+              ) ||
+              (member.enrollmentNo?.toLowerCase() ?? "").includes(
+                searchTerm.toLowerCase()
+              ) ||
+              (member.phoneNumber?.toLowerCase() ?? "").includes(
+                searchTerm.toLowerCase()
+              );
+
+            return memberMatches;
+          });
+
+          // Include group if leader matches or any member matches
+          if (leaderMatches || filteredMembers.length > 0) {
+            return {
+              ...group,
+              members: leaderMatches ? group.members : filteredMembers,
+            };
+          }
+
+          return null;
+        })
+        .filter((group) => group !== null) as Group[];
     }
   })();
 
