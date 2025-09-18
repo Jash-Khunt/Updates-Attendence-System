@@ -34,9 +34,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Participant {
   _id: string;
-  userId: string; // This should be the actual user ID
+  userId: string;
   name: string;
   email: string;
+  enrollmentNo?: string;
+  phoneNumber?: string; // <-- Add this line
   isTemporary?: boolean;
 }
 
@@ -738,7 +740,15 @@ export default function EventAttendancePage() {
 
   const exportToCSV = () => {
     const rows: string[][] = [
-      ["Name", "Email", "Entry Time", "Exit Time", "Status"],
+      [
+        "Name",
+        "Email",
+        "Enrollment No",
+        "Phone Number",
+        "Entry Time",
+        "Exit Time",
+        "Status",
+      ],
     ];
 
     if (event?.eventType === "SOLO") {
@@ -751,6 +761,8 @@ export default function EventAttendancePage() {
           rows.push([
             p.name,
             p.email,
+            p.enrollmentNo || "—",
+            p.phoneNumber || "—",
             record?.entryTime
               ? new Date(record.entryTime).toLocaleString()
               : "Not marked",
@@ -762,6 +774,7 @@ export default function EventAttendancePage() {
         });
     } else {
       (participants as Group[]).forEach((group) => {
+        // Leader
         if (group.leader && group.leader.email) {
           const leaderRowId = `${group.leader.email.toLowerCase()}_leader_${
             group.groupId
@@ -772,6 +785,8 @@ export default function EventAttendancePage() {
             rows.push([
               group.leader.name + " (Leader)",
               group.leader.email,
+              group.leader.enrollmentNo || "—",
+              group.leader.phoneNumber || "—",
               leaderRecord?.entryTime
                 ? new Date(leaderRecord.entryTime).toLocaleString()
                 : "Not marked",
@@ -782,7 +797,7 @@ export default function EventAttendancePage() {
             ]);
           }
         }
-
+        // Members
         group.members.forEach((member) => {
           if (member && member.email) {
             const memberRowId = `${member.email.toLowerCase()}_member_${
@@ -794,6 +809,8 @@ export default function EventAttendancePage() {
               rows.push([
                 member.name,
                 member.email,
+                member.enrollmentNo || "—",
+                member.phoneNumber || "—",
                 memberRecord?.entryTime
                   ? new Date(memberRecord.entryTime).toLocaleString()
                   : "Not marked",
@@ -805,6 +822,8 @@ export default function EventAttendancePage() {
             }
           }
         });
+        // Add a blank row after each group
+        rows.push([""]); // This will add a single empty cell, which renders as a blank line in CSV
       });
     }
 
@@ -980,12 +999,13 @@ export default function EventAttendancePage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Enrollment No</TableHead>
+                    <TableHead>Phone Number</TableHead>{" "}
+                    {/* <-- Add this line */}
                     <TableHead>Entry Time</TableHead>
                     <TableHead>Exit Time</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                    <TableHead>Manual Status</TableHead>
-                    <TableHead>Delete</TableHead>
+                    {/* ...other columns... */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1007,6 +1027,8 @@ export default function EventAttendancePage() {
                               )}
                             </TableCell>
                             <TableCell>{p.email}</TableCell>
+                            <TableCell>{p.enrollmentNo || "—"}</TableCell>
+                            <TableCell>{p.phoneNumber || "—"}</TableCell>
                             <TableCell>
                               {record?.entryTime
                                 ? new Date(record.entryTime).toLocaleString()
@@ -1110,6 +1132,12 @@ export default function EventAttendancePage() {
                                 {group.leader.name} (Leader)
                               </TableCell>
                               <TableCell>{group.leader.email}</TableCell>
+                              <TableCell>
+                                {group.leader.enrollmentNo || "—"}
+                              </TableCell>
+                              <TableCell>
+                                {group.leader.phoneNumber || "—"}
+                              </TableCell>
                               <TableCell>
                                 {leaderRecord?.entryTime
                                   ? new Date(
@@ -1224,6 +1252,12 @@ export default function EventAttendancePage() {
                                             {member.name}
                                           </TableCell>
                                           <TableCell>{member.email}</TableCell>
+                                          <TableCell>
+                                            {member.enrollmentNo || "—"}
+                                          </TableCell>
+                                          <TableCell>
+                                            {member.phoneNumber || "—"}
+                                          </TableCell>
                                           <TableCell>
                                             {memberRecord?.entryTime
                                               ? new Date(
